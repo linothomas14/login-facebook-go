@@ -1,20 +1,30 @@
 package main
 
 import (
+	"dummy-login-meta/util"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 )
 
-// TokenInfo stores information from Facebook's token debug endpoint
-
-const (
-	appID       = "1121571312516703"
-	redirectURL = "https://b753-101-128-100-252.ngrok-free.app/callback"
-	secret      = "23c5f0ef44a3eb3f2fcc9c21948f928b"
-	configID    = "427409016599790"
+var (
+	AppID       string
+	RedirectURL string
+	Secret      string
+	ConfigID    string
 )
+
+func init() {
+	if err := util.LoadConfig("."); err != nil {
+		log.Fatal(err)
+	}
+	AppID = util.Configuration.App.AppID
+	RedirectURL = util.Configuration.App.HostURLCallback + "/callback"
+	Secret = util.Configuration.App.Secret
+	ConfigID = util.Configuration.App.ConfigID
+}
 
 func main() {
 	http.HandleFunc("/", handleHome)
@@ -29,7 +39,6 @@ func handleTokenValidity(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Token")
 	url := fmt.Sprintf("https://graph.facebook.com/me?access_token=%s", token)
 	resp, err := http.Get(url)
-	fmt.Println("   ")
 	fmt.Println(resp)
 	if err != nil {
 		fmt.Println(err)
@@ -38,11 +47,28 @@ func handleTokenValidity(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "<h1>Login with Facebook</h1><a href=\"/login\">Login with Facebook</a>")
+	// Baca isi file index.html
+	htmlBytes, err := ioutil.ReadFile("static/index.html")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error reading index.html:", err)
+		return
+	}
+
+	// Set header content-type untuk response sebagai text/html
+	w.Header().Set("Content-Type", "text/html")
+
+	// Tulis isi file index.html sebagai response HTTP
+	if _, err := w.Write(htmlBytes); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Println("Error writing response:", err)
+		return
+	}
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
-	loginURL := fmt.Sprintf("https://www.facebook.com/v19.0/dialog/oauth?client_id=%s&redirect_uri=%s&scope=email&config_id=%s", appID, redirectURL, configID)
+
+	loginURL := fmt.Sprintf("https://www.facebook.com/v19.0/dialog/oauth?client_id=%s&redirect_uri=%s&scope=email&config_id=%s", AppID, RedirectURL, ConfigID)
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 }
 
@@ -66,7 +92,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAccessToken(code string) (string, error) {
-	accessTokenURL := fmt.Sprintf("https://graph.facebook.com/v19.0/oauth/access_token?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s", appID, redirectURL, secret, code)
+	accessTokenURL := fmt.Sprintf("https://graph.facebook.com/v19.0/oauth/access_token?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s", AppID, RedirectURL, Secret, code)
 
 	resp, err := http.Get(accessTokenURL)
 	if err != nil {

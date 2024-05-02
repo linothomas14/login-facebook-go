@@ -1,0 +1,8 @@
+server:
+  port: 8080
+
+app:
+  app_id: string
+  config_id: string
+  secret: string
+  host_url_callback: https://28bb-122-50-6-195.ngrok-free.app
