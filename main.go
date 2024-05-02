@@ -7,9 +7,8 @@ import (
 )
 
 const (
-	appID = "242067665649305"
-	// redirectURL = "https://webhook.site/dbe0257a-e729-4fc6-aef6-b3372e3472ab"
-	redirectURL = "https://8fd1-122-50-6-195.ngrok-free.app/callback"
+	appID       = "242067665649305"
+	redirectURL = "https://28bb-122-50-6-195.ngrok-free.app/callback"
 	secret      = "fb20deb1c5cb8e17d41b40c49f9f33c9"
 	configID    = "2062786767487557"
 )
@@ -50,7 +49,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAccessToken(code string) (string, error) {
-	accessTokenURL := fmt.Sprintf("http://localhost:5001/v19.0/oauth/access_token?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s", appID, redirectURL, secret, code)
+	accessTokenURL := fmt.Sprintf("https://graph.facebook.com/v19.0/oauth/access_token?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s", appID, redirectURL, secret, code)
 
 	resp, err := http.Get(accessTokenURL)
 	if err != nil {
