@@ -3,21 +3,38 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
+// TokenInfo stores information from Facebook's token debug endpoint
+
 const (
-	appID       = "242067665649305"
-	redirectURL = "https://28bb-122-50-6-195.ngrok-free.app/callback"
-	secret      = "fb20deb1c5cb8e17d41b40c49f9f33c9"
-	configID    = "2062786767487557"
+	appID       = "1121571312516703"
+	redirectURL = "https://b753-101-128-100-252.ngrok-free.app/callback"
+	secret      = "23c5f0ef44a3eb3f2fcc9c21948f928b"
+	configID    = "427409016599790"
 )
 
 func main() {
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/callback", handleCallback)
+	http.HandleFunc("/validate-token", handleTokenValidity)
+	http.HandleFunc("/logout", handleLogout)
+	log.Println("Server starting on http://localhost:8080...")
 	http.ListenAndServe(":8080", nil)
+}
+func handleTokenValidity(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Token")
+	url := fmt.Sprintf("https://graph.facebook.com/me?access_token=%s", token)
+	resp, err := http.Get(url)
+	fmt.Println("   ")
+	fmt.Println(resp)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
@@ -76,4 +93,46 @@ func getAccessToken(code string) (string, error) {
 	}
 
 	return result.AccessToken, nil
+}
+
+func handleLogout(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Token")
+	if token == "" {
+		http.Error(w, "Token is missing", http.StatusBadRequest)
+		return
+	}
+
+	if err := invalidateFacebookToken(token); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintln(w, "You have been logged out successfully.")
+}
+
+func invalidateFacebookToken(token string) error {
+	revokeURL := fmt.Sprintf("https://graph.facebook.com/me/permissions?access_token=%s", token)
+	req, err := http.NewRequest(http.MethodDelete, revokeURL, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Success bool `json:"success"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if !result.Success {
+		return fmt.Errorf("Failed to revoke token")
+	}
+
+	return nil
 }
