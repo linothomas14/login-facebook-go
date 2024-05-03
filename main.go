@@ -32,6 +32,7 @@ func main() {
 
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/login", handleLogin)
+	http.HandleFunc("/login-sdk", handleLoginSDK)
 	http.HandleFunc("/callback", handleCallback)
 	http.HandleFunc("/validate-token", handleTokenValidity)
 	http.HandleFunc("/logout", handleLogout)
@@ -48,6 +49,22 @@ func handleTokenValidity(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 }
+
+func handleLoginSDK(w http.ResponseWriter, r *http.Request) {
+	// Baca isi file index.html
+	tmpl, err := template.ParseFiles("templates/index_facebook_SDK.html")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Execute template with no data (since this is a simple example)
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	// Baca isi file index.html

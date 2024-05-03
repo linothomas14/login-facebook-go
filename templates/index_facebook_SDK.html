@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook SDK Integration</title>
+    <script>
+        // Load the Facebook SDK asynchronously
+        (function(d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) return;
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+
+        // Initialize the Facebook SDK after loading
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId      : '1121571312516703', // Replace with your actual app ID
+                cookie     : true,
+                xfbml      : true,
+                version    : 'v19.0'
+            });
+
+            // Monitor authentication state
+            FB.getLoginStatus(function(response) {
+                statusChangeCallback(response);
+            });
+        };
+
+        // Handle changes in authentication state
+        function statusChangeCallback(response) {
+            console.log('Facebook login status changed.');
+            console.log(response);
+            if (response.status === 'connected') {
+                // The user is logged in and authenticated
+                console.log('Successfully logged in with Facebook');
+                FB.api('/me', function(response) {
+                    console.log('Good to see you, ' + response.name + '.');
+                    document.getElementById('status').innerHTML =
+                        'Thanks for logging in, ' + response.name + '!';
+                });
+            } else {
+                // The person is not logged into your webpage or we are unable to tell
+                document.getElementById('status').innerHTML = 'Please log ' +
+                    'into this webpage.';
+            }
+        }
+
+        // Check login state to handle Facebook login button
+        function checkLoginState() {
+            FB.getLoginStatus(function(response) {
+                statusChangeCallback(response);
+            });
+        }
+
+        // Function to handle logout
+        function logout() {
+            FB.logout(function(response) {
+                // user is now logged out
+                console.log('Logged out successfully');
+                document.getElementById('status').innerHTML = 'You have been logged out.';
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Facebook SDK Integration Example</h1>
+    <!-- Login button provided by Facebook -->
+    <fb:login-button scope="public_profile,email" onlogin="checkLoginState();" config_id="{config_id}">
+        Login with Facebook
+    </fb:login-button>
+    <!-- Logout button -->
+    <button onclick="logout();">Logout</button>
+
+    <!-- Display login status -->
+    <div id="status">
+    </div>
+</body>
+</html>
