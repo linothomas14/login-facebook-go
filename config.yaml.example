@@ -6,3 +6,4 @@ app:
   config_id: string
   secret: string
   host_url_callback: https://28bb-122-50-6-195.ngrok-free.app
+  host_client_callback: https://webhook.site/cd88d25a-3c1e-4b5f-b965-d90c3eeaf472 # access token will be send to here 

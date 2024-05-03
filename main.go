@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"dummy-login-meta/util"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"text/template"
 )
 
 var (
@@ -27,6 +28,8 @@ func init() {
 }
 
 func main() {
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/callback", handleCallback)
@@ -48,21 +51,16 @@ func handleTokenValidity(w http.ResponseWriter, r *http.Request) {
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	// Baca isi file index.html
-	htmlBytes, err := ioutil.ReadFile("static/index.html")
+	tmpl, err := template.ParseFiles("templates/index.html")
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error reading index.html:", err)
 		return
 	}
 
-	// Set header content-type untuk response sebagai text/html
-	w.Header().Set("Content-Type", "text/html")
-
-	// Tulis isi file index.html sebagai response HTTP
-	if _, err := w.Write(htmlBytes); err != nil {
+	// Execute template with no data (since this is a simple example)
+	err = tmpl.Execute(w, nil)
+	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Println("Error writing response:", err)
-		return
 	}
 }
 
@@ -88,7 +86,27 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Access Token: %s", accessToken)
+	payload := map[string]string{"access_token": accessToken}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	webhookURL := util.Configuration.App.HostClientCallback
+
+	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		http.Error(w, "Failed to send webhook request", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
+		http.Error(w, "Failed to send webhook request", resp.StatusCode)
+		return
+	}
+
+	fmt.Fprintf(w, "Access Token was sent to %s\nToken : %s", webhookURL, accessToken)
 }
 
 func getAccessToken(code string) (string, error) {
@@ -109,13 +127,12 @@ func getAccessToken(code string) (string, error) {
 		} `json:"error"`
 	}
 
-	fmt.Println(resp.Body)
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", err
 	}
 
 	if result.Error != nil {
-		return "", fmt.Errorf("Facebook API error: %s", result.Error)
+		return "", fmt.Errorf("facebook API error: %v", result.Error)
 	}
 
 	return result.AccessToken, nil
@@ -128,7 +145,7 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := invalidateFacebookToken(token); err != nil {
+	if err := revokeFacebookToken(token); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -136,7 +153,7 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "You have been logged out successfully.")
 }
 
-func invalidateFacebookToken(token string) error {
+func revokeFacebookToken(token string) error {
 	revokeURL := fmt.Sprintf("https://graph.facebook.com/me/permissions?access_token=%s", token)
 	req, err := http.NewRequest(http.MethodDelete, revokeURL, nil)
 	if err != nil {
@@ -157,7 +174,7 @@ func invalidateFacebookToken(token string) error {
 	}
 
 	if !result.Success {
-		return fmt.Errorf("Failed to revoke token")
+		return fmt.Errorf("failed to revoke token")
 	}
 
 	return nil

@@ -24,10 +24,11 @@ type Config struct {
 		LocalTime  bool   `mapstructure:"local_time"`
 	} `mapstructure:"logger"`
 	App struct {
-		AppID           string `mapstructure:"app_id"`
-		ConfigID        string `mapstructure:"config_id"`
-		Secret          string `mapstructure:"secret"`
-		HostURLCallback string `mapstructure:"host_url_callback"`
+		AppID              string `mapstructure:"app_id"`
+		ConfigID           string `mapstructure:"config_id"`
+		Secret             string `mapstructure:"secret"`
+		HostURLCallback    string `mapstructure:"host_url_callback"`
+		HostClientCallback string `mapstructure:"host_client_callback"`
 	} `mapstructure:"app"`
 }
 
