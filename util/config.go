@@ -11,7 +11,8 @@ var Configuration Config
 
 type Config struct {
 	Server struct {
-		Port int `mapstructure:"port"`
+		Port int    `mapstructure:"port"`
+		Mode string `mapstructure:"mode"`
 	} `mapstructure:"server"`
 
 	Logger struct {
@@ -30,6 +31,21 @@ type Config struct {
 		HostURLCallback    string `mapstructure:"host_url_callback"`
 		HostClientCallback string `mapstructure:"host_client_callback"`
 	} `mapstructure:"app"`
+	MongoDB struct {
+		Host           string `mapstructure:"host"`
+		Port           int    `mapstructure:"port"`
+		Username       string `mapstructure:"username"`
+		Password       string `mapstructure:"password"`
+		Database       string `mapstructure:"database"`
+		CredentialDB   string `mapstructure:"credential_database"`
+		MaxPoolSize    uint64 `mapstructure:"max_pool_size"`
+		ConnectTimeout int    `mapstructure:"connect_timeout"`
+		AuthSource     string `mapstructure:"auth_source"`
+		Collections    struct {
+			Token            string `mapstructure:"token"`
+			ClientCredential string `mapstructure:"client_credential"`
+		} `mapstructure:"collection"`
+	} `mapstructure:"mongodb"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
