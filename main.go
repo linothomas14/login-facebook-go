@@ -29,10 +29,9 @@ func init() {
 
 func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/login", handleLogin)
-	http.HandleFunc("/login-sdk", handleLoginSDK)
+	http.HandleFunc("/login-sdk", handleLoginSDK) // 
 	http.HandleFunc("/callback", handleCallback)
 	http.HandleFunc("/validate-token", handleTokenValidity)
 	http.HandleFunc("/logout", handleLogout)
