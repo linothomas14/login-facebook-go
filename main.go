@@ -11,6 +11,8 @@ import (
 
 	"login-meta-jatis/http/api"
 	"login-meta-jatis/provider"
+	"login-meta-jatis/repository"
+	"login-meta-jatis/service"
 	"login-meta-jatis/util"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -35,9 +37,10 @@ func main() {
 	logger.Infof(provider.AppLog, "Successfully connected to MongoDB.")
 
 	go func(c *mongo.Client, logger provider.ILogger) {
-		var credRepo repository.CredRepository = repository.NewCredRepositoryImpl(c, logger)
-
-		app := api.NewApp(outboundService, logger)
+		var credRepo repository.CredentialRepository = repository.NewCredRepositoryImpl(c, logger)
+		var tokenRepo repository.TokenRepository = repository.NewTokenRepositoryImpl(c, logger)
+		var loginService service.LoginService = service.NewLoginImpl(tokenRepo, credRepo, logger)
+		app := api.NewApp(loginService, logger)
 		addr := fmt.Sprintf(":%v", util.Configuration.Server.Port)
 		server, err := app.CreateServer(addr)
 		if err != nil {
