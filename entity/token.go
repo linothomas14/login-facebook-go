@@ -11,6 +11,7 @@ type Token struct {
 	ClientID  string             `json:"client_id" bson:"client_id"`
 	ExpiredAt time.Time          `json:"expired_at" bson:"expired_at"`
 	Token     string             `json:"token" bson:"token"`
+	TokenMeta string             `json:"token_meta" bson:"token_meta"`
 }
 
 func (t *Token) IsExpired() bool {

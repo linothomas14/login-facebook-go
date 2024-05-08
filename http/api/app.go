@@ -10,6 +10,7 @@ import (
 	"login-meta-jatis/util"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 type App struct {
@@ -53,11 +54,31 @@ func (a *App) handleLogin(ctx *gin.Context) {
 }
 
 func (a *App) handleCallback(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "pong",
-	})
-}
 
-func (a *App) sendMessages(ctx *gin.Context) {
+	var reqID string
+	val, ok := ctx.Get("req-id")
+	if ok {
+		reqID = val.(string)
+	}
 
+	code := ctx.Request.URL.Query().Get("code")
+
+	if code == "" {
+		ctx.String(http.StatusBadRequest, "Code not found")
+		return
+	}
+	token, err := a.loginService.Login(ctx, code)
+	if err != nil {
+		a.log.WithFields(provider.AppLog, logrus.Fields{"REQUEST_ID": reqID}).Errorf("send message error, reason: %s", err)
+		code, errorResp := mapError(err)
+
+		ctx.JSON(code, errorResp)
+		ctx.Abort()
+		return
+	}
+	a.log.WithFields(provider.AppLog, logrus.Fields{"REQUEST_ID": reqID}).Infof("token generated : %#v", token)
+
+	// Redirect to web client with the token
+	loginURL := fmt.Sprintf("https://8d00-180-252-93-189.ngrok-free.app/?token=%s", token)
+	ctx.Redirect(http.StatusSeeOther, loginURL)
 }

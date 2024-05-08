@@ -87,7 +87,8 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCallback(w http.ResponseWriter, r *http.Request) {
-
+	URLFULL := r.URL.RawPath
+	fmt.Println("URLNYA BOS = ", URLFULL)
 	code := r.URL.Query().Get("code")
 	fmt.Println(code)
 	if code == "" {
@@ -124,7 +125,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// fmt.Fprintf(w, "Access Token was sent to %s\nToken : %s", webhookURL, accessToken)
 	// REDIRECT TO WEB CLIENT DENGAN MEMBAWA TOKEN JATIS
-	loginURL := fmt.Sprintf("https://f8f6-180-252-93-189.ngrok-free.app/")
+	loginURL := fmt.Sprintf(" https://8d00-180-252-93-189.ngrok-free.app/")
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 	fmt.Println("done")
 }

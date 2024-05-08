@@ -32,16 +32,16 @@ type Config struct {
 		HostClientCallback string `mapstructure:"host_client_callback"`
 	} `mapstructure:"app"`
 	MongoDB struct {
-		Host           string `mapstructure:"host"`
-		Port           int    `mapstructure:"port"`
-		Username       string `mapstructure:"username"`
-		Password       string `mapstructure:"password"`
-		Database       string `mapstructure:"database"`
-		CredentialDB   string `mapstructure:"credential_database"`
-		MaxPoolSize    uint64 `mapstructure:"max_pool_size"`
-		ConnectTimeout int    `mapstructure:"connect_timeout"`
-		AuthSource     string `mapstructure:"auth_source"`
-		Collections    struct {
+		Host               string `mapstructure:"host"`
+		Port               int    `mapstructure:"port"`
+		Username           string `mapstructure:"username"`
+		Password           string `mapstructure:"password"`
+		Database           string `mapstructure:"database"`
+		CredentialDatabase string `mapstructure:"credential_database"`
+		MaxPoolSize        uint64 `mapstructure:"max_pool_size"`
+		ConnectTimeout     int    `mapstructure:"connect_timeout"`
+		AuthSource         string `mapstructure:"auth_source"`
+		Collection         struct {
 			Token            string `mapstructure:"token"`
 			ClientCredential string `mapstructure:"client_credential"`
 		} `mapstructure:"collection"`

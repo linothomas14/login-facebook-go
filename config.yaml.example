@@ -20,3 +20,11 @@ mongodb:
   max_pool_size: 10
   connect_timeout: 5
   auth_source: admin
+logger:
+  dir: log                                  
+  file_name: wag-messages-api
+  max_backups: 0                            # set 0 for unlimited backups
+  max_size: 10                              # in mb
+  max_age: 90                               # in days, set 0 for unlimited days
+  compress: true
+  local_time: true
