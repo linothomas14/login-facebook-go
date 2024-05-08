@@ -26,7 +26,7 @@ func init() {
 	provider.InitLogDir()
 }
 
-func main() {
+func main_bck() {
 	logger := provider.NewLogger()
 
 	mongoClient, err := provider.NewMongoDBClient()

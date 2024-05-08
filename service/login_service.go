@@ -2,14 +2,18 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"login-meta-jatis/entity"
 	"login-meta-jatis/provider"
 	"login-meta-jatis/repository"
+	"login-meta-jatis/util"
+	"net/http"
 )
 
 type LoginService interface {
-	Login(ctx context.Context, code string) (token string, err error)
+	LoginCore(ctx context.Context, token string, state string) (err error)
 }
 
 type LoginImpl struct {
@@ -30,28 +34,66 @@ func NewLoginImpl(
 	}
 }
 
-func (l *LoginImpl) Login(ctx context.Context, code string) (token string, err error) {
+func (l *LoginImpl) LoginCore(ctx context.Context, token string, state string) (err error) {
 
 	var newToken entity.Token
 
-	// TODO : TUKER CODE -> ACCESS TOKEN
+	// TODO : EXTEND SHORT LIVE TOKEN -> LONG LIVE TOKEN
+	longLivedToken, err := extendToken(token)
 
-	// TODO : AMBIL INFO DARI ACCESS TOKEN
+	if err != nil {
+		return
+	}
 
-	// TODO : GET TOKEN INFO BY HIT ENDPOINT : https://graph.facebook.com/v19.0/debug_token?input_token={YOUR_TOKEN}
-
-	// TODO : GET CLIENT BY USERID
+	newToken.TokenMeta = longLivedToken
 
 	// TODO : GENERATE TOKEN JATIS,
 
-	// TODO : STORE BESERTA CLIENT_ID DAN ACCESS TOKEN
+	// TODO : STORE TOKEN_JATIS, STATE(CLIENT_ID) DAN ACCESS_TOKEN
 	err = l.tokenRepo.Create(ctx, newToken)
 
 	if err != nil {
-		return token, fmt.Errorf("%v: %v", ErrRepository, err)
+		return fmt.Errorf("%v: %v", ErrRepository, err)
 	}
 
 	// TODO : SEND TOKEN TO WEBHOOK CLIENT
 
 	return
+}
+
+func extendToken(shortLivedToken string) (string, error) {
+
+	type AuthToken struct {
+		AccessToken string `json:"access_token,omitempty"`
+	}
+
+	ctx := context.Background()
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("https://graph.facebook.com/v19.0/oauth/access_token?client_id=%s&client_secret=%s&grant_type=fb_exchange_token&fb_exchange_token=%s", util.Configuration.App.AppID, util.Configuration.App.Secret, shortLivedToken), nil)
+
+	if err != nil {
+		// Handle error
+		return "", err
+	}
+	httpClient := &http.Client{}
+	httpResp, err := httpClient.Do(httpReq)
+	if err != nil {
+		// Handle error
+		return "", err
+	}
+	defer httpResp.Body.Close()
+
+	body, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		// Handle error
+		return "", err
+	}
+
+	var longLivedToken AuthToken
+	err = json.Unmarshal(body, &longLivedToken)
+	if err != nil {
+
+		return "", err
+	}
+	return longLivedToken.AccessToken, err
 }

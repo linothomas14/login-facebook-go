@@ -10,7 +10,6 @@ import (
 	"login-meta-jatis/util"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 type App struct {
@@ -31,8 +30,9 @@ func (a *App) CreateServer(address string) (*http.Server, error) {
 
 	r.GET("/ping", a.checkConnectivity)
 
-	r.POST("/login", a.handleLogin)
+	r.POST("/login", a.Login)
 	r.POST("/callback", a.handleCallback)
+	r.POST("/callback/core", a.handleCallbackCore)
 
 	server := &http.Server{
 		Addr:    address,
@@ -48,7 +48,7 @@ func (a *App) checkConnectivity(ctx *gin.Context) {
 	})
 }
 
-func (a *App) handleLogin(ctx *gin.Context) {
+func (a *App) Login(ctx *gin.Context) {
 	loginURL := fmt.Sprintf("https://www.facebook.com/v19.0/dialog/oauth?client_id=%s&redirect_uri=%s&scope=email&config_id=%s", util.Configuration.App.AppID, util.Configuration.App.HostURLCallback, util.Configuration.App.ConfigID)
 	ctx.Redirect(http.StatusSeeOther, loginURL)
 }
@@ -61,24 +61,12 @@ func (a *App) handleCallback(ctx *gin.Context) {
 		reqID = val.(string)
 	}
 
-	code := ctx.Request.URL.Query().Get("code")
+	fmt.Println(reqID)
 
-	if code == "" {
-		ctx.String(http.StatusBadRequest, "Code not found")
-		return
-	}
-	token, err := a.loginService.Login(ctx, code)
-	if err != nil {
-		a.log.WithFields(provider.AppLog, logrus.Fields{"REQUEST_ID": reqID}).Errorf("send message error, reason: %s", err)
-		code, errorResp := mapError(err)
+	// TODO : Redirect to /callback/core
 
-		ctx.JSON(code, errorResp)
-		ctx.Abort()
-		return
-	}
-	a.log.WithFields(provider.AppLog, logrus.Fields{"REQUEST_ID": reqID}).Infof("token generated : %#v", token)
+}
 
-	// Redirect to web client with the token
-	loginURL := fmt.Sprintf("https://8d00-180-252-93-189.ngrok-free.app/?token=%s", token)
-	ctx.Redirect(http.StatusSeeOther, loginURL)
+func (a *App) handleCallbackCore(ctx *gin.Context) {
+
 }

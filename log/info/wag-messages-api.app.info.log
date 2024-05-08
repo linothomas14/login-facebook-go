@@ -1,4 +1,0 @@
-{"@time":"2024-05-06 17:47:18.395","level":"info","msg":"Successfully connected to MongoDB."}
-{"@time":"2024-05-06 17:47:18.395","level":"info","msg":"Server running at: :8080"}
-{"@time":"2024-05-06 17:47:21.153","level":"info","msg":"Receiving signal: interrupt"}
-{"@time":"2024-05-06 17:47:21.156","level":"info","msg":"Successfully disconnected from MongoDB."}
