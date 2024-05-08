@@ -94,18 +94,6 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 }
 
-func handleLogin1(w http.ResponseWriter, r *http.Request) {
-
-	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s&config_id=%s", AppID, "https://d28f-180-252-88-237.ngrok-free.app/callback-client1?", ConfigID)
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-}
-
-func handleLogin2(w http.ResponseWriter, r *http.Request) {
-
-	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s&config_id=%s", AppID, "https://d28f-180-252-88-237.ngrok-free.app/callback-client2", ConfigID)
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-}
-
 func handleLoginBento(w http.ResponseWriter, r *http.Request) {
 
 	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=pages_read_engagement,pages_manage_metadata,instagram_basic,instagram_manage_messages,public_profile", AppID, RedirectURL)
