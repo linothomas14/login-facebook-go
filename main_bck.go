@@ -43,11 +43,11 @@ func main() {
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/iframe", handleIframe)
 	http.HandleFunc("/login", handleLogin)
-	http.HandleFunc("/login-sdk", handleLoginSDK)
+	// http.HandleFunc("/login-sdk", handleLoginSDK)
 	http.HandleFunc("/login-bento", handleLoginBento)
 	http.HandleFunc("/callback", handleCallbackBento)
 	http.HandleFunc("/callback/core", handleCallbackBentoCore)
-	http.HandleFunc("/validate-token", handleTokenValidity)
+	// http.HandleFunc("/validate-token", handleTokenValidity)
 	http.HandleFunc("/logout", handleLogout)
 	log.Println("Server starting on http://localhost:8080...")
 	http.ListenAndServe(":8080", nil)
@@ -87,35 +87,9 @@ func handleIframe(w http.ResponseWriter, r *http.Request){
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s&state=coba&config_id=%s", AppID, RedirectURL, ConfigID)
-	fmt.Printf("login URL: %s" , loginURL)
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 }
 
-
-func handleLoginSDK(w http.ResponseWriter, r *http.Request) {
-	// Baca isi file index.html
-	tmpl, err := template.ParseFiles("templates/index_facebook_SDK.html")
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	// Execute template with no data (since this is a simple example)
-	err = tmpl.Execute(w, nil)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-func handleTokenValidity(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("Token")
-	url := fmt.Sprintf("https://graph.facebook.com/me?access_token=%s", token)
-	resp, err := http.Get(url)
-	fmt.Println(resp)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer resp.Body.Close()
-}
 func handleLoginBento(w http.ResponseWriter, r *http.Request) {
 
 	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=pages_read_engagement,pages_manage_metadata,instagram_basic,instagram_manage_messages,public_profile", AppID, RedirectURL)
@@ -123,9 +97,8 @@ func handleLoginBento(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 }
 
-
 func handleCallbackBento(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("handle call back bento")
+
 	state := r.URL.Query().Get("state")
 
 	callbackUri := fmt.Sprintf("%s/callback/core?state=%s", util.Configuration.App.HostURLCallback, state)
@@ -150,11 +123,10 @@ func handleCallbackBento(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("\n")
 }
 
 func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("handle call back bento core")
+
 	access_token := r.URL.Query().Get("access_token")
 	fmt.Println("access_token = ", access_token)
 	state := r.URL.Query().Get("state")
@@ -200,10 +172,6 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 
 	webhookURL := util.Configuration.App.HostClientCallback
 
-	loginURL := fmt.Sprintf("https://ecef-180-243-15-162.ngrok-free.app/")
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-	fmt.Println("done")
-	fmt.Println("Long Lived Token:", longLivedToken)
 	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		http.Error(w, "Failed to send webhook request", http.StatusInternalServerError)
@@ -217,8 +185,11 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 
 	// fmt.Fprintf(w, "Access Token was sent to %s\nToken : %s", webhookURL, accessToken)
 	// REDIRECT TO WEB CLIENT DENGAN MEMBAWA TOKEN JATIS
+	loginURL := fmt.Sprintf("https://d28f-180-252-88-237.ngrok-free.app/")
+	http.Redirect(w, r, loginURL, http.StatusSeeOther)
+	fmt.Println("done")
+	fmt.Println("Long Lived Token:", longLivedToken)
 }
-
 
 func handleCallback(w http.ResponseWriter, r *http.Request) {
 
@@ -265,7 +236,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// fmt.Fprintf(w, "Access Token was sent to %s\nToken : %s", webhookURL, accessToken)
 	// REDIRECT TO WEB CLIENT DENGAN MEMBAWA TOKEN JATIS
-	loginURL := fmt.Sprintf("https://ecef-180-243-15-162.ngrok-free.app/")
+	loginURL := fmt.Sprintf("https://d28f-180-252-88-237.ngrok-free.app/")
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 	fmt.Println("done")
 }
