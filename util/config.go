@@ -1,6 +1,8 @@
 package util
 
 import (
+	"fmt"
+
 	"github.com/spf13/viper"
 )
 
@@ -53,6 +55,7 @@ func LoadConfig(path string) (err error) {
 	viper.AddConfigPath(path)
 	viper.SetConfigName(ConfigName)
 	viper.SetConfigType(ConfigType)
+	fmt.Println(path)
 
 	viper.AutomaticEnv()
 

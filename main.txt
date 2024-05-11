@@ -1,4 +1,4 @@
-package main
+// package main
 
 // import (
 // 	"bytes"
@@ -57,7 +57,8 @@ package main
 // 		return
 // 	}
 
-// 	logger.Infof(provider.AppLog, "Successfully connected to MongoDB.")
+// func main_bck() {
+// 	logger := provider.NewLogger()
 
 // 	go func(c *mongo.Client, logger provider.ILogger) {
 // 		var credRepo repository.CredentialRepository = repository.NewCredRepositoryImpl(c, logger)
