@@ -10,6 +10,7 @@ import (
 	"login-meta-jatis/util"
 	"net/http"
 	"text/template"
+	"github.com/gorilla/mux"
 )
 
 type AuthToken struct {
@@ -35,22 +36,22 @@ func init() {
 	fmt.Println(RedirectURL)
 	fmt.Println(Secret)
 	fmt.Println(ConfigID)
+	fmt.Println(" ")
 }
 
 func main() {
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	r := mux.NewRouter()
+    r.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+    r.HandleFunc("/", handleHome)
+    r.HandleFunc("/iframe", handleIframe)  // Modified path to include parameters
+    r.HandleFunc("/login", handleLogin)
+    r.HandleFunc("/login-bento", handleLoginBento)
+    r.HandleFunc("/callback", handleCallbackBento)
+    r.HandleFunc("/callback/core", handleCallbackBentoCore)
+    r.HandleFunc("/logout", handleLogout)
 
-	http.HandleFunc("/", handleHome)
-	http.HandleFunc("/iframe", handleIframe)
-	http.HandleFunc("/login", handleLogin)
-	// http.HandleFunc("/login-sdk", handleLoginSDK)
-	http.HandleFunc("/login-bento", handleLoginBento)
-	http.HandleFunc("/callback", handleCallbackBento)
-	http.HandleFunc("/callback/core", handleCallbackBentoCore)
-	// http.HandleFunc("/validate-token", handleTokenValidity)
-	http.HandleFunc("/logout", handleLogout)
-	log.Println("Server starting on http://localhost:8080...")
-	http.ListenAndServe(":8080", nil)
+    log.Println("Server starting on http://localhost:8080...")
+    http.ListenAndServe(":8080", r)  // Note the router instance 'r' is used here
 }
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	// Baca isi file index.html
@@ -67,21 +68,27 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleIframe(w http.ResponseWriter, r *http.Request){
-	// Baca isi file index_2.html
-	tmpl, err := template.ParseFiles("templates/index_2.html")
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+func handleIframe(w http.ResponseWriter, r *http.Request) {
 
-	// Execute template with no data (since this is a simple example)
-	err = tmpl.Execute(w, nil)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
+    tmpl, err := template.ParseFiles("templates/index_2.html")
+    if err != nil {
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        return
+    }
 
-	fmt.Println("successfully rendered index_2.html")
+    // Pass the clientId and host to the template
+    data := struct {
+        LoginUrl     string
+    }{
+        LoginUrl: fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=pages_read_engagement,pages_manage_metadata,instagram_basic,instagram_manage_messages,public_profile", AppID, RedirectURL),
+    }
+
+    err = tmpl.Execute(w, data)
+    if err != nil {
+        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+    }
+
+    fmt.Println("successfully rendered index_2.html with login url: " + data.LoginUrl)
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +100,8 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleLoginBento(w http.ResponseWriter, r *http.Request) {
 
 	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=pages_read_engagement,pages_manage_metadata,instagram_basic,instagram_manage_messages,public_profile", AppID, RedirectURL)
-
+	fmt.Println(RedirectURL)
+	fmt.Println(loginURL)
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 }
 
@@ -128,9 +136,9 @@ func handleCallbackBento(w http.ResponseWriter, r *http.Request) {
 func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 
 	access_token := r.URL.Query().Get("access_token")
-	fmt.Println("access_token = ", access_token)
-	state := r.URL.Query().Get("state")
-	fmt.Println("state = ", state)
+	// fmt.Println("access_token = ", access_token)
+	// state := r.URL.Query().Get("state")
+	// fmt.Println("state = ", state)
 
 	ctx := context.Background()
 
@@ -154,7 +162,7 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Response Body:", string(body))
+	// fmt.Println("Response Body:", string(body))
 
 	// Decode JSON jika perlu
 	var longLivedToken AuthToken
@@ -185,9 +193,9 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 
 	// fmt.Fprintf(w, "Access Token was sent to %s\nToken : %s", webhookURL, accessToken)
 	// REDIRECT TO WEB CLIENT DENGAN MEMBAWA TOKEN JATIS
-	loginURL := fmt.Sprintf("https://d28f-180-252-88-237.ngrok-free.app/")
+	loginURL := fmt.Sprintf("https://c992-180-243-5-217.ngrok-free.app/")
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-	fmt.Println("done")
+	fmt.Println("\ndone")
 	fmt.Println("Long Lived Token:", longLivedToken)
 }
 
