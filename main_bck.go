@@ -13,14 +13,9 @@ import (
 	"net/http"
 	"strings"
 	"text/template"
-<<<<<<< HEAD
-	"github.com/gorilla/mux"
-=======
 	"time"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
->>>>>>> d49c8bb12fae3a20b60155a2b9e7f86a1b959160
 )
 
 type Token struct {
