@@ -193,7 +193,7 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 
 	// fmt.Fprintf(w, "Access Token was sent to %s\nToken : %s", webhookURL, accessToken)
 	// REDIRECT TO WEB CLIENT DENGAN MEMBAWA TOKEN JATIS
-	loginURL := fmt.Sprintf("https://c992-180-243-5-217.ngrok-free.app/")
+	loginURL := fmt.Sprintf("https://da1c-182-3-44-206.ngrok-free.app/")
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 	fmt.Println("\ndone")
 	fmt.Println("Long Lived Token:", longLivedToken)
