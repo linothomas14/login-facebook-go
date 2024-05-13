@@ -7,10 +7,23 @@
 </head>
 <body>
     <h1>Data from API</h1>
-    <button onclick="fetchData()">Login</button>
+    <!-- login bento (ke suatu funtion init)-->
+    <!-- <button onclick="fetchData()">Login</button>  -->
+    <button onclick="login()">Login</button> 
     <pre id="apiData"></pre>
 
     <script>
+        // buat function init() yang ngebuat session
+            // kalau belum ada di session, generate baru dan taro session
+    
+        // buat function login()
+           // redirect ke /login-bento?client_id=abc&session=<ngambil session>
+           // otomatis redirect ke halaman facebook
+           // looping function getAccesToken sampai return token
+
+        // buat function getAccessToken (how to trigger this function?)
+           // get ke https://da1c-182-3-44-206.ngrok-free.app/get-access-token?client_id=abc&session=random_session
+
         async function fetchData() {
             let dataReceived = false;
             window.open("https://www.google.com", "_blank");

@@ -236,8 +236,8 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loginURL := fmt.Sprintf("%s/success-login", util.Configuration.App.HostURLCallback)
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
+	// loginURL := fmt.Sprintf("%s/success-login", util.Configuration.App.HostURLCallback)
+	// http.Redirect(w, r, loginURL, http.StatusSeeOther)
 	fmt.Println("\ndone")
 	fmt.Println("Long Lived Token:", longLivedToken)
 }
