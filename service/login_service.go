@@ -56,7 +56,7 @@ func (l *LoginImpl) LoginCore(ctx context.Context, token string, state string) (
 		return fmt.Errorf("%v: %v", ErrRepository, err)
 	}
 
-	// TODO : SEND TOKEN TO WEBHOOK CLIENT
+	// TODO : TAMPILKAN HALAMAN success_login.html
 
 	return
 }

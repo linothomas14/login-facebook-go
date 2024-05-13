@@ -1,20 +1,39 @@
 package main
 
 import (
-	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"login-meta-jatis/provider"
 	"login-meta-jatis/util"
 	"net/http"
+	"strings"
 	"text/template"
+<<<<<<< HEAD
 	"github.com/gorilla/mux"
+=======
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+>>>>>>> d49c8bb12fae3a20b60155a2b9e7f86a1b959160
 )
+
+type Token struct {
+	ClientID   string    `json:"client_id" bson:"client_id"`
+	Session    string    `json:"session_id" bson:"session"`
+	TokenJatis string    `json:"token_jatis" bson:"token_jatis"`
+	TokenMeta  string    `json:"token_meta" bson:"token_meta"`
+	ExpiredAt  time.Time `json:"expired_at" bson:"expired_at"`
+}
 
 type AuthToken struct {
 	AccessToken string `json:"access_token,omitempty"`
+	ExpiresIn   int64  `json:"expires_in"`
 }
 
 var (
@@ -29,7 +48,7 @@ func init() {
 		log.Fatal(err)
 	}
 	AppID = util.Configuration.App.AppID
-	RedirectURL = util.Configuration.App.HostURLCallback + "%2Fcallback%3Fstate%3DcobaState123"
+	RedirectURL = util.Configuration.App.HostURLCallback + "/callback?"
 	Secret = util.Configuration.App.Secret
 	ConfigID = util.Configuration.App.ConfigID
 	fmt.Println(AppID)
@@ -40,19 +59,33 @@ func init() {
 }
 
 func main() {
-	r := mux.NewRouter()
-    r.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-    r.HandleFunc("/", handleHome)
-    r.HandleFunc("/iframe", handleIframe)  // Modified path to include parameters
-    r.HandleFunc("/login", handleLogin)
-    r.HandleFunc("/login-bento", handleLoginBento)
-    r.HandleFunc("/callback", handleCallbackBento)
-    r.HandleFunc("/callback/core", handleCallbackBentoCore)
-    r.HandleFunc("/logout", handleLogout)
 
-    log.Println("Server starting on http://localhost:8080...")
-    http.ListenAndServe(":8080", r)  // Note the router instance 'r' is used here
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	http.HandleFunc("/", handleHome)
+	http.HandleFunc("/success-login", handleSuccessLogin)
+	http.HandleFunc("/get-access-token", handleGetToken)
+
+	http.HandleFunc("/login-bento", handleLoginBento)
+	http.HandleFunc("/callback", handleCallbackBento)
+
+	http.HandleFunc("/callback/core", handleCallbackBentoCore)
+	http.HandleFunc("/validate-token", handleTokenValidity)
+	http.HandleFunc("/logout", handleLogout)
+	log.Println("Server starting on http://localhost:8080...")
+	http.ListenAndServe(":8080", nil)
 }
+func handleTokenValidity(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Token")
+	url := fmt.Sprintf("https://graph.facebook.com/me?access_token=%s", token)
+	resp, err := http.Get(url)
+	fmt.Println(resp)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+}
+
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	// Baca isi file index.html
 	tmpl, err := template.ParseFiles("templates/index.html")
@@ -68,40 +101,34 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleIframe(w http.ResponseWriter, r *http.Request) {
+func handleSuccessLogin(w http.ResponseWriter, r *http.Request) {
+	// Baca isi file index.html
+	tmpl, err := template.ParseFiles("templates/success_login.html")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
-    tmpl, err := template.ParseFiles("templates/index_2.html")
-    if err != nil {
-        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-        return
-    }
-
-    // Pass the clientId and host to the template
-    data := struct {
-        LoginUrl     string
-    }{
-        LoginUrl: fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=pages_read_engagement,pages_manage_metadata,instagram_basic,instagram_manage_messages,public_profile", AppID, RedirectURL),
-    }
-
-    err = tmpl.Execute(w, data)
-    if err != nil {
-        http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-    }
-
-    fmt.Println("successfully rendered index_2.html with login url: " + data.LoginUrl)
+	// Execute template with no data (since this is a simple example)
+	err = tmpl.Execute(w, nil)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 }
 
-func handleLogin(w http.ResponseWriter, r *http.Request) {
-
-	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s&state=coba&config_id=%s", AppID, RedirectURL, ConfigID)
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-}
-
+// Redirect to login page FB
 func handleLoginBento(w http.ResponseWriter, r *http.Request) {
 
-	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=pages_read_engagement,pages_manage_metadata,instagram_basic,instagram_manage_messages,public_profile", AppID, RedirectURL)
-	fmt.Println(RedirectURL)
-	fmt.Println(loginURL)
+	session := r.URL.Query().Get("session")
+	// fmt.Println(session)
+	clientID := r.URL.Query().Get("client_id")
+	// fmt.Println(clientID)
+	finalRedirectURL := fmt.Sprintf("%sstate=%s__%s", RedirectURL, clientID, session)
+
+	// fmt.Println("URL = ", finalRedirectURL)
+
+	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=pages_read_engagement,pages_manage_metadata,instagram_basic,instagram_manage_messages,public_profile", AppID, finalRedirectURL)
+
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 }
 
@@ -110,6 +137,7 @@ func handleCallbackBento(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 
 	callbackUri := fmt.Sprintf("%s/callback/core?state=%s", util.Configuration.App.HostURLCallback, state)
+	fmt.Println(callbackUri)
 	html := fmt.Sprintf(`
 		<!DOCTYPE html>
 		<html>
@@ -131,34 +159,51 @@ func handleCallbackBento(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	fmt.Println("done ygy")
 }
 
 func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 
 	access_token := r.URL.Query().Get("access_token")
-	// fmt.Println("access_token = ", access_token)
-	// state := r.URL.Query().Get("state")
-	// fmt.Println("state = ", state)
+	fmt.Println("access_token = ", access_token)
+	state := r.URL.Query().Get("state")
+
+	fmt.Println("state = ", state)
+
+	parts := strings.Split(state, "__")
+
+	// Memastikan ada dua bagian yang dipisahkan
+	if len(parts) != 2 {
+		fmt.Println("Format string tidak valid")
+		return
+	}
+
+	// Mendapatkan client ID dan session ID
+	clientID := parts[0]
+	session := parts[1]
+
+	fmt.Println(clientID)
+	fmt.Println(session)
 
 	ctx := context.Background()
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("https://graph.facebook.com/v19.0/oauth/access_token?client_id=%s&client_secret=%s&grant_type=fb_exchange_token&fb_exchange_token=%s", util.Configuration.App.AppID, util.Configuration.App.Secret, access_token), nil)
 
 	if err != nil {
-		// Handle error
+		fmt.Println("Error on create request", err)
 		return
 	}
 	httpClient := &http.Client{}
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
-		// Handle error
+		fmt.Println("Error on hit endpoint meta", err)
 		return
 	}
 	defer httpResp.Body.Close()
 
 	body, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
-		// Handle error
+		fmt.Println("Error on read body res", err)
 		return
 	}
 
@@ -168,128 +213,59 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 	var longLivedToken AuthToken
 	err = json.Unmarshal(body, &longLivedToken)
 	if err != nil {
-
+		fmt.Println("Error on Unmarshal", err)
 		return
 	}
-	payload := map[string]string{"access_token": longLivedToken.AccessToken}
-	payloadBytes, err := json.Marshal(payload)
+
+	tokenJatis, err := generateToken()
+
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		fmt.Println("Error on generateToken", err)
 		return
 	}
 
-	webhookURL := util.Configuration.App.HostClientCallback
+	fmt.Println("expires in = ", longLivedToken.ExpiresIn)
 
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(payloadBytes))
+	token := Token{
+		ClientID:   clientID,
+		Session:    session,
+		TokenMeta:  longLivedToken.AccessToken,
+		TokenJatis: tokenJatis,
+		ExpiredAt:  expiresInToDate(longLivedToken.ExpiresIn),
+	}
+
+	err = insertToken(token)
+
 	if err != nil {
-		http.Error(w, "Failed to send webhook request", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
-		http.Error(w, "Failed to send webhook request", resp.StatusCode)
+		fmt.Println("Error on insertToken", err)
 		return
 	}
 
-	// fmt.Fprintf(w, "Access Token was sent to %s\nToken : %s", webhookURL, accessToken)
-	// REDIRECT TO WEB CLIENT DENGAN MEMBAWA TOKEN JATIS
-	loginURL := fmt.Sprintf("https://da1c-182-3-44-206.ngrok-free.app/")
+	loginURL := fmt.Sprintf("%s/success-login", util.Configuration.App.HostURLCallback)
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 	fmt.Println("\ndone")
 	fmt.Println("Long Lived Token:", longLivedToken)
 }
 
-func handleCallback(w http.ResponseWriter, r *http.Request) {
+func handleGetToken(w http.ResponseWriter, r *http.Request) {
 
-	code := r.URL.Query().Get("code")
-	fmt.Println("code=", code)
+	session := r.URL.Query().Get("session")
+	// fmt.Println(session)
+	clientID := r.URL.Query().Get("client_id")
+	// fmt.Println(clientID)
 
-	client_id := r.URL.Query().Get("client_id")
-	fmt.Println("client_id=", client_id)
+	token, err := getTokenByClientIDAndSession(clientID, session)
 
-	state := r.URL.Query().Get("state")
-	fmt.Println("state=", state)
-
-	if code == "" {
-		http.Error(w, "Code not found", http.StatusBadRequest)
-		return
-	}
-	fmt.Println("CODE = ", code)
-	accessToken, err := getAccessToken(code)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error on getTokenByClientIDAndSession", err)
 		return
 	}
 
-	payload := map[string]string{"access_token": accessToken}
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	response := map[string]interface{}{"token": token.TokenJatis, "expired_at": token.ExpiredAt}
 
-	webhookURL := util.Configuration.App.HostClientCallback
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		http.Error(w, "Failed to send webhook request", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
-		http.Error(w, "Failed to send webhook request", resp.StatusCode)
-		return
-	}
-
-	// fmt.Fprintf(w, "Access Token was sent to %s\nToken : %s", webhookURL, accessToken)
-	// REDIRECT TO WEB CLIENT DENGAN MEMBAWA TOKEN JATIS
-	loginURL := fmt.Sprintf("https://d28f-180-252-88-237.ngrok-free.app/")
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-	fmt.Println("done")
-}
-
-func handleLogin1(w http.ResponseWriter, r *http.Request) {
-
-	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s&config_id=%s", AppID, "https://d28f-180-252-88-237.ngrok-free.app/callback-client1?", ConfigID)
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-}
-
-func handleLogin2(w http.ResponseWriter, r *http.Request) {
-
-	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s&config_id=%s", AppID, "https://d28f-180-252-88-237.ngrok-free.app/callback-client2", ConfigID)
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-}
-
-func getAccessToken(code string) (string, error) {
-	accessTokenURL := fmt.Sprintf("https://graph.facebook.com/v19.0/oauth/access_token?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s", AppID, RedirectURL, Secret, code)
-
-	fmt.Println("access token URL = ", accessTokenURL)
-
-	resp, err := http.Get(accessTokenURL)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	var result struct {
-		AccessToken string `json:"access_token"`
-		Error       *struct {
-			Message string `json:"message"`
-			Type    string `json:"type"`
-			Code    int    `json:"code"`
-		} `json:"error"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
-	}
-
-	if result.Error != nil {
-		return "", fmt.Errorf("facebook API error: %v", result.Error)
-	}
-
-	return result.AccessToken, nil
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -332,4 +308,98 @@ func revokeFacebookToken(token string) error {
 	}
 
 	return nil
+}
+
+func insertToken(token Token) error {
+	ctx := context.Background()
+	mongoclient, err := provider.NewMongoDBClient()
+
+	if err != nil {
+		fmt.Printf("Connect to DB failed: %s", err)
+		return err
+	}
+
+	db := mongoclient.Database(util.Configuration.MongoDB.Database)
+
+	coll := db.Collection(util.Configuration.MongoDB.Collection.Token)
+	result, err := coll.InsertOne(ctx, token)
+	if err != nil {
+		fmt.Printf("creating chat history in MongoDB failed: %s", err)
+		return err
+	}
+
+	_, ok := result.InsertedID.(primitive.ObjectID)
+	if !ok {
+		fmt.Printf("error asserting InsertedID to ObjectID")
+		return err
+	}
+	return nil
+}
+
+func generateToken() (string, error) {
+	// Menghitung jumlah byte yang diperlukan untuk panjang token yang diinginkan
+	length := 35
+
+	byteLength := length / 4 * 3
+	if length%4 != 0 {
+		byteLength++
+	}
+
+	// Membuat slice untuk menyimpan byte acak
+	randomBytes := make([]byte, byteLength)
+
+	// Mengisi slice dengan byte acak
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return "", err
+	}
+
+	// Mengonversi byte menjadi string base64
+	token := base64.URLEncoding.EncodeToString(randomBytes)
+
+	// Memastikan panjang token sesuai dengan yang diinginkan
+	if len(token) > length {
+		token = token[:length]
+	}
+
+	return token, nil
+}
+
+func expiresInToDate(expiresIn int64) time.Time {
+	// Membuat durasi dari expiresIn dalam detik
+	expiresInDuration := time.Second * time.Duration(expiresIn)
+
+	// Menghitung waktu sekarang
+	currentTime := time.Now()
+
+	// Menambahkan expiresInDuration ke currentTime untuk mendapatkan waktu kadaluarsa
+	expirationTime := currentTime.Add(expiresInDuration)
+
+	return expirationTime
+}
+
+func getTokenByClientIDAndSession(clientID string, session string) (token Token, err error) {
+
+	ctx := context.Background()
+	mongoclient, err := provider.NewMongoDBClient()
+
+	if err != nil {
+		fmt.Printf("Connect to DB failed: %s", err)
+		return token, err
+	}
+
+	db := mongoclient.Database(util.Configuration.MongoDB.Database)
+
+	coll := db.Collection(util.Configuration.MongoDB.Collection.Token)
+	filter := bson.M{"client_id": clientID, "session": session}
+
+	// Melakukan pencarian dalam koleksi
+	err = coll.FindOne(ctx, filter).Decode(&token)
+	if err != nil {
+		fmt.Printf("Error Token not found: %s", err)
+		return token, err
+	}
+
+	return token, nil
+
 }
