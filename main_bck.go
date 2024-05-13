@@ -55,21 +55,34 @@ func init() {
 }
 
 func main() {
-
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	http.HandleFunc("/", handleHome)
-	http.HandleFunc("/success-login", handleSuccessLogin)
-	http.HandleFunc("/get-access-token", handleGetToken)
+	http.HandleFunc("/", corsMiddleware(handleHome))
+	http.HandleFunc("/success-login", corsMiddleware(handleSuccessLogin))
+	http.HandleFunc("/get-access-token", corsMiddleware(handleGetToken))
 
-	http.HandleFunc("/login-bento", handleLoginBento)
-	http.HandleFunc("/callback", handleCallbackBento)
+	http.HandleFunc("/login-bento", corsMiddleware(handleLoginBento))
+	http.HandleFunc("/callback", corsMiddleware(handleCallbackBento))
 
-	http.HandleFunc("/callback/core", handleCallbackBentoCore)
+	http.HandleFunc("/callback/core", corsMiddleware(handleCallbackBentoCore))
 
-	http.HandleFunc("/logout", handleLogout)
+	http.HandleFunc("/logout", corsMiddleware(handleLogout))
 	log.Println("Server starting on http://localhost:8080...")
 	http.ListenAndServe(":8080", nil)
+}
+
+// corsMiddleware adds CORS headers to the response
+func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*") // Allow any domain
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next(w, r)
+	}
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
@@ -88,15 +101,24 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSuccessLogin(w http.ResponseWriter, r *http.Request) {
-	// Baca isi file index.html
+	tokenJatis := r.URL.Query().Get("tokenJatis")
+
+	// Create a data structure to pass to the template
+	data := struct {
+		TokenJatis string
+	}{
+		TokenJatis: tokenJatis,
+	}
+
+	// Parse the HTML template file
 	tmpl, err := template.ParseFiles("templates/success_login.html")
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// Execute template with no data (since this is a simple example)
-	err = tmpl.Execute(w, nil)
+	// Execute the template with the token data
+	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
@@ -227,8 +249,8 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// loginURL := fmt.Sprintf("%s/success-login", util.Configuration.App.HostURLCallback)
-	// http.Redirect(w, r, loginURL, http.StatusSeeOther)
+	loginURL := fmt.Sprintf("%s/success-login?tokenJatis=%s", util.Configuration.App.HostURLCallback, token.TokenJatis)
+	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 	fmt.Println("\ndone")
 	fmt.Println("Long Lived Token:", longLivedToken)
 }
@@ -258,6 +280,9 @@ func handleGetToken(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+
+	loginURL := fmt.Sprintf("%s/success-login?tokenJatis=%s", util.Configuration.App.HostURLCallback, token.TokenJatis)
+	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 
 }
 

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Button Module</title>
+    <script src="index.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var button = JatisButton({
+                text: 'Facebook Login!',
+                onClick: function() {
+                    alert('Button clicked!');
+                },
+                style: {
+                    backgroundColor: 'blue',
+                    color: 'white',
+                    fontSize: '16px',
+                    padding: '10px 20px',
+                    borderRadius: '5px',
+                    border: 'none'
+                }
+            });
+            document.body.appendChild(button);
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>
