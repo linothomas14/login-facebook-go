@@ -12,8 +12,7 @@ mongodb:
   port: 27017
   username: admin
   password: secret
-  database: redirect_api
-  credential_database: credential_redirect_api
+  database: credential_redirect_api
   collection: 
     token: client_token
     client_credential: credentials

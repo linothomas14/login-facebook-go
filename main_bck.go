@@ -16,6 +16,7 @@ import (
 	"time"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Token struct {
@@ -65,20 +66,10 @@ func main() {
 	http.HandleFunc("/callback", handleCallbackBento)
 
 	http.HandleFunc("/callback/core", handleCallbackBentoCore)
-	http.HandleFunc("/validate-token", handleTokenValidity)
+
 	http.HandleFunc("/logout", handleLogout)
 	log.Println("Server starting on http://localhost:8080...")
 	http.ListenAndServe(":8080", nil)
-}
-func handleTokenValidity(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("Token")
-	url := fmt.Sprintf("https://graph.facebook.com/me?access_token=%s", token)
-	resp, err := http.Get(url)
-	fmt.Println(resp)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer resp.Body.Close()
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +113,7 @@ func handleLoginBento(w http.ResponseWriter, r *http.Request) {
 
 	// fmt.Println("URL = ", finalRedirectURL)
 
-	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=pages_read_engagement,pages_manage_metadata,instagram_basic,instagram_manage_messages,public_profile", AppID, finalRedirectURL)
+	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=email,read_insights,pages_manage_cta,pages_manage_instant_articles,pages_show_list,read_page_mailboxes,ads_management,ads_read,business_management,page_events,pages_read_engagement,pages_manage_metadata,pages_read_user_content,pages_manage_ads,pages_manage_posts,pages_manage_engagement,whatsapp_business_messaging,public_profile", AppID, finalRedirectURL)
 
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 }
@@ -252,6 +243,13 @@ func handleGetToken(w http.ResponseWriter, r *http.Request) {
 	token, err := getTokenByClientIDAndSession(clientID, session)
 
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			w.WriteHeader(http.StatusNotFound)
+			response := map[string]interface{}{"error": "Token not found"}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
 		fmt.Println("Error on getTokenByClientIDAndSession", err)
 		return
 	}
@@ -264,14 +262,34 @@ func handleGetToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("Token")
-	if token == "" {
-		http.Error(w, "Token is missing", http.StatusBadRequest)
+	session := r.URL.Query().Get("session")
+	// fmt.Println(session)
+	clientID := r.URL.Query().Get("client_id")
+	// fmt.Println(clientID)
+
+	token, err := getTokenByClientIDAndSession(clientID, session)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			w.WriteHeader(http.StatusNotFound)
+			response := map[string]interface{}{"error": "Token not found"}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		fmt.Println("Error on getTokenByClientIDAndSession", err)
 		return
 	}
 
-	if err := revokeFacebookToken(token); err != nil {
+	if err := revokeFacebookToken(token.TokenMeta); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = deleteTokenByClientIDAndSession(clientID, session)
+
+	if err != nil {
+		fmt.Println("Error on getTokenByClientIDAndSession", err)
 		return
 	}
 
@@ -391,10 +409,41 @@ func getTokenByClientIDAndSession(clientID string, session string) (token Token,
 	// Melakukan pencarian dalam koleksi
 	err = coll.FindOne(ctx, filter).Decode(&token)
 	if err != nil {
-		fmt.Printf("Error Token not found: %s", err)
+		if err == mongo.ErrNoDocuments {
+			fmt.Printf("Error Token not found: %s", err)
+			return token, err
+		}
+		fmt.Printf("Error on FindOne Data : %s", err)
 		return token, err
 	}
 
 	return token, nil
 
+}
+
+func deleteTokenByClientIDAndSession(clientID string, session string) error {
+	ctx := context.Background()
+	mongoclient, err := provider.NewMongoDBClient()
+	if err != nil {
+		fmt.Printf("Connect to DB failed: %s", err)
+		return err
+	}
+
+	db := mongoclient.Database(util.Configuration.MongoDB.Database)
+	coll := db.Collection(util.Configuration.MongoDB.Collection.Token)
+	filter := bson.M{"client_id": clientID, "session": session}
+
+	// Menghapus dokumen yang sesuai dengan filter
+	result, err := coll.DeleteOne(ctx, filter)
+	if err != nil {
+		fmt.Printf("Error deleting token: %s", err)
+		return err
+	}
+
+	// Jika tidak ada dokumen yang dihapus, kembalikan error
+	if result.DeletedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
 }
