@@ -17,6 +17,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Token struct {
@@ -248,6 +249,13 @@ func handleGetToken(w http.ResponseWriter, r *http.Request) {
 	token, err := getTokenByClientIDAndSession(clientID, session)
 
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			w.WriteHeader(http.StatusNotFound)
+			response := map[string]interface{}{"error": "Token not found"}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
 		fmt.Println("Error on getTokenByClientIDAndSession", err)
 		return
 	}
@@ -387,7 +395,11 @@ func getTokenByClientIDAndSession(clientID string, session string) (token Token,
 	// Melakukan pencarian dalam koleksi
 	err = coll.FindOne(ctx, filter).Decode(&token)
 	if err != nil {
-		fmt.Printf("Error Token not found: %s", err)
+		if err == mongo.ErrNoDocuments {
+			fmt.Printf("Error Token not found: %s", err)
+			return token, err
+		}
+		fmt.Printf("Error on FindOne Data : %s", err)
 		return token, err
 	}
 
