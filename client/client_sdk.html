@@ -12,8 +12,6 @@
   <h1>Client Login Facebook</h1>
   <button id="loginButton" onclick="login('clientBRI')">Login</button>
   <button id="logoutButton" onclick="logout('clientBRI')">Logout</button>
-
-
 </body>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -22,6 +20,7 @@
 
   function updateButtonVisibility() {
     const sessionCookie = getCookie("session");
+    console.log(sessionCookie)
     const loginButton = document.getElementById("loginButton");
     const logoutButton = document.getElementById("logoutButton");
 

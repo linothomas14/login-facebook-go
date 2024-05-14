@@ -265,10 +265,11 @@ func handleGetToken(w http.ResponseWriter, r *http.Request) {
 
 	token, err := getTokenByClientIDAndSession(clientID, session)
 
+
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			w.WriteHeader(http.StatusNotFound)
-			response := map[string]interface{}{"error": "Token not found"}
+			w.WriteHeader(http.StatusOK)
+			response := map[string]interface{}{"token": nil, "expired_at": nil}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(response)
 			return
@@ -282,8 +283,8 @@ func handleGetToken(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
-	loginURL := fmt.Sprintf("%s/success-login?tokenJatis=%s", util.Configuration.App.HostURLCallback, token.TokenJatis)
-	http.Redirect(w, r, loginURL, http.StatusSeeOther)
+	// loginURL := fmt.Sprintf("%s/success-login?tokenJatis=%s", util.Configuration.App.HostURLCallback, token.TokenJatis)
+	// http.Redirect(w, r, loginURL, http.StatusSeeOther)
 
 }
 
