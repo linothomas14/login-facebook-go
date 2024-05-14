@@ -1,27 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>API Call</title>
-    <script src="node_modules/login-button-jatis/index.js"></script>
-  </head>
-  <body>
-    <h1>Client Login Facebook</h1>
-    <button
-      onclick="login('clientBRI-1','https://da1c-182-3-44-206.ngrok-free.app')"
-    >
-      Login Skema 1
-    </button>
-    <button
-      onclick="loginSchema2('clientBRI-1', 'https://da1c-182-3-44-206.ngrok-free.app')"
-    >
-      Login Skema 2
-    </button>
-    <button
-      onclick="logout('clientBRI-1', 'https://da1c-182-3-44-206.ngrok-free.app')"
-    >
-      Logout
-    </button>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Call</title>
+  <script src="node_modules/login-button-jatis/index.js"></script>
+</head>
+
+<body>
+  <h1>Client Login Facebook</h1>
+  <button id="loginButton" onclick="login('clientBRI')">Login</button>
+  <button id="logoutButton" onclick="logout('clientBRI')">Logout</button>
+
+
+</body>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    updateButtonVisibility();
+  });
+
+  function updateButtonVisibility() {
+    const sessionCookie = getCookie("session");
+    const loginButton = document.getElementById("loginButton");
+    const logoutButton = document.getElementById("logoutButton");
+
+    if (sessionCookie) {
+      loginButton.style.display = "none";
+      logoutButton.style.display = "block";
+    } else {
+      loginButton.style.display = "block";
+      logoutButton.style.display = "none";
+    }
+  }
+</script>
+
 </html>
