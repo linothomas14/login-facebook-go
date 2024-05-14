@@ -11,25 +11,27 @@
     <button id="logoutButton" onclick="logout('clientBRI')">Logout</button>
 
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        updateButtonVisibility();
-      });
+      //   document.addEventListener("DOMContentLoaded", () => {
+      //     updateButtonVisibility();
+      //   });
 
-      function updateButtonVisibility() {
-        const sessionCookie = getCookie("session");
-        const loginButton = document.getElementById("loginButton");
-        const logoutButton = document.getElementById("logoutButton");
+      //   function updateButtonVisibility() {
+      //     const sessionCookie = getCookie("session");
+      //     const loginButton = document.getElementById("loginButton");
+      //     const logoutButton = document.getElementById("logoutButton");
 
-        if (sessionCookie) {
-          loginButton.style.display = "none";
-          logoutButton.style.display = "block";
-        } else {
-          loginButton.style.display = "block";
-          logoutButton.style.display = "none";
-        }
-      }
+      //     if (sessionCookie) {
+      //       loginButton.style.display = "none";
+      //       logoutButton.style.display = "block";
+      //       window.location.reload();
+      //     } else {
+      //       loginButton.style.display = "block";
+      //       logoutButton.style.display = "none";
+      //       window.location.reload();
+      //     }
+      //   }
 
-      const HOST = "https://9ad9-180-251-181-137.ngrok-free.app";
+      const HOST = "https://da1c-182-3-44-206.ngrok-free.app";
 
       function login(clientId) {
         const sessionCookie = getCookie("session");
@@ -38,49 +40,65 @@
           const loginUrl = `${HOST}/login-bento?client_id=${clientId}&session=${randomSession}`;
           window.open(loginUrl, "_blank");
 
+          let isTimeOut = true;
           let attempts = 0;
           const maxAttempts = 10;
           const interval = setInterval(() => {
+            console.log("pooling access token, please wait....");
             if (attempts < maxAttempts) {
-              fetchAccessToken(clientId, randomSession, interval); // Pass interval ID to possibly clear it
-              attempts++;
+              fetchAccessToken(clientId, randomSession)
+                .then((tokenReceived) => {
+                  if (tokenReceived) {
+                    if (tokenReceived["token"] != null) {
+                      clearInterval(interval);
+                      setCookie("token", tokenReceived["token"], 32);
+                      isTimeOut = false;
+                      console.log(
+                        "Access token fetched successfully. your token is: " +
+                          tokenReceived["token"]
+                      );
+                    }
+                    attempts++;
+                  }
+                })
+                .catch((error) => {
+                  console.error("Error fetching access token:", error);
+                  attempts++;
+                });
             } else {
               clearInterval(interval);
               console.error(
                 "Failed to fetch access token after maximum attempts."
               );
             }
-          }, 5000); // Attempt every 5 seconds
+          }, 2000); // pooling every 2s
 
-          // Set a timeout to stop the fetch process after 30 seconds
+          // Set a timeout to stop the fetch process after 60 seconds
           setTimeout(() => {
             clearInterval(interval);
-            console.log("Process timed out after 30 seconds.");
-          }, 30000); // 30 seconds timeout
-        } else {
-          fetchAccessToken(clientId, sessionCookie);
+            if (isTimeOut) {
+              console.error("Process timed out after 30 seconds.");
+            }
+          }, 60000);
         }
       }
 
-      function fetchAccessToken(clientId, session, intervalId = null) {
-        fetch(
+      async function fetchAccessToken(clientId, session) {
+        return await fetch(
           `${HOST}/get-access-token?client_id=${clientId}&session=${session}`
         )
           .then((response) => {
             if (response.ok) {
               return response.json();
             } else if (response.status === 404) {
-              return null;
+              console.log("404 error: No token available.");
+              return null; // Return null, so that the caller knows the fetch was unsuccessful
             } else {
-              throw new Error("Unexpected response status: " + response.status); // Handle other non-ok statuses by throwing an error
+              throw new Error(`Unexpected response status: ${response.status}`);
             }
           })
-          .then((data) => {
-            console.log("Access Token:", data.token);
-            if (data.token != undefined) {
-              setCookie("token", data.token, 32);
-            }
-            if (intervalId) clearInterval(intervalId);
+          .catch((error) => {
+            console.log("error");
           });
       }
 
