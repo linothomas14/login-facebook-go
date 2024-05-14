@@ -7,68 +7,81 @@
   </head>
   <body>
     <h1>Client Login Facebook</h1>
-    <button
-      onclick="login('clientBRI','https://da1c-182-3-44-206.ngrok-free.app')"
-    >
-      Login Skema 1
-    </button>
-    <pre id="apiData"></pre>
-    <pre id="sessionData"></pre>
-    <button
-      onclick="loginSchema2('clientBRI', 'https://da1c-182-3-44-206.ngrok-free.app')"
-    >
-      Login Skema 2
-    </button>
-    <button
-      onclick="logout('clientBRI', 'https://da1c-182-3-44-206.ngrok-free.app')"
-    >
-      Logout
-    </button>
+    <button id="loginButton" onclick="login('clientBRI')">Login</button>
+    <button id="logoutButton" onclick="logout('clientBRI')">Logout</button>
 
     <script>
-      function login(clientId, host) {
+      document.addEventListener("DOMContentLoaded", () => {
+        updateButtonVisibility();
+      });
+
+      function updateButtonVisibility() {
         const sessionCookie = getCookie("session");
-        if (!sessionCookie) {
-          const randomSession = generateRandomCookie("session", 32);
-          window.open(
-            `${host}/login-bento?client_id=${clientId}&session=${randomSession}`,
-            "_blank"
-          );
-          window.location.reload();
+        const loginButton = document.getElementById("loginButton");
+        const logoutButton = document.getElementById("logoutButton");
+
+        if (sessionCookie) {
+          loginButton.style.display = "none";
+          logoutButton.style.display = "block";
         } else {
-          document.getElementById("sessionData").textContent =
-            "Session Cookie: " + sessionCookie;
-          fetchAccessToken(clientId, sessionCookie, host);
+          loginButton.style.display = "block";
+          logoutButton.style.display = "none";
         }
       }
 
-      function loginSchema2(clientId, host) {
+      const HOST = "https://9ad9-180-251-181-137.ngrok-free.app";
+
+      function login(clientId) {
         const sessionCookie = getCookie("session");
         if (!sessionCookie) {
           const randomSession = generateRandomCookie("session", 32);
-          window.open(
-            `${host}/login-bento?client_id=${clientId}&session=${randomSession}`,
-            "_blank"
-          );
-          window.location.reload();
-        } else {
-          fetch(
-            `${host}/get-access-token?client_id=${clientId}&session=${sessionCookie}`
-          )
-            .then((response) => {
-              if (response.ok) {
-                return response.json();
-              } else {
-                throw new Error("Network response was not ok.");
-              }
-            })
-            .then((data) => {
-              window.open(
-                `${host}/success-login?tokenJatis=${data.token}`,
-                "_blank"
+          const loginUrl = `${HOST}/login-bento?client_id=${clientId}&session=${randomSession}`;
+          window.open(loginUrl, "_blank");
+
+          let attempts = 0;
+          const maxAttempts = 10;
+          const interval = setInterval(() => {
+            if (attempts < maxAttempts) {
+              fetchAccessToken(clientId, randomSession, interval); // Pass interval ID to possibly clear it
+              attempts++;
+            } else {
+              clearInterval(interval);
+              console.error(
+                "Failed to fetch access token after maximum attempts."
               );
-            });
+            }
+          }, 5000); // Attempt every 5 seconds
+
+          // Set a timeout to stop the fetch process after 30 seconds
+          setTimeout(() => {
+            clearInterval(interval);
+            console.log("Process timed out after 30 seconds.");
+          }, 30000); // 30 seconds timeout
+        } else {
+          fetchAccessToken(clientId, sessionCookie);
         }
+      }
+
+      function fetchAccessToken(clientId, session, intervalId = null) {
+        fetch(
+          `${HOST}/get-access-token?client_id=${clientId}&session=${session}`
+        )
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            } else if (response.status === 404) {
+              return null;
+            } else {
+              throw new Error("Unexpected response status: " + response.status); // Handle other non-ok statuses by throwing an error
+            }
+          })
+          .then((data) => {
+            console.log("Access Token:", data.token);
+            if (data.token != undefined) {
+              setCookie("token", data.token, 32);
+            }
+            if (intervalId) clearInterval(intervalId);
+          });
       }
 
       function logout(clientId, host) {
@@ -107,40 +120,17 @@
         return randomValue;
       }
 
-      function fetchAccessToken(clientId, session, host) {
-        fetch(
-          `${host}/get-access-token?client_id=${clientId}&session=${session}`
-        )
-          .then((response) => {
-            if (response.ok) {
-              return response.json();
-            } else {
-              throw new Error("Network response was not ok.");
-            }
-          })
-          .then((data) => {
-            document.getElementById("apiData").textContent =
-              "Access Token: " + data.token;
-          })
-          .catch((error) => {
-            document.getElementById("apiData").textContent =
-              "Failed to fetch access";
-          });
-      }
-
-      function fetchLogout(clientId, session, host) {
+      function fetchLogout(clientId, session) {
         deleteCookie("session");
-        fetch(`${host}/logout?client_id=${clientId}&session=${session}`)
+        deleteCookie("token");
+        fetch(`${HOST}/logout?client_id=${clientId}&session=${session}`)
           .then((response) => {
             if (response.ok) {
-              return response.json();
-            } else {
-              throw new Error("Network response was not ok.");
+              return;
             }
           })
           .then((data) => {
-            document.getElementById("apiData").textContent =
-              "Successfully logout";
+            console.log("successfuly logout");
             window.location.reload();
           });
       }
