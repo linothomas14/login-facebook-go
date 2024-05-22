@@ -3,10 +3,9 @@ server:
   mode: debug
 app:
   app_id: string
-  config_id: string
   secret: string
   host_url_callback: https://28bb-122-50-6-195.ngrok-free.app
-  host_client_callback: https://webhook.site/cd88d25a-3c1e-4b5f-b965-d90c3eeaf472 # access token will be send to here 
+  
 mongodb:
   host: localhost
   port: 27017
@@ -21,7 +20,7 @@ mongodb:
   auth_source: admin
 logger:
   dir: log                                  
-  file_name: wag-messages-api
+  file_name: login-facebook
   max_backups: 0                            # set 0 for unlimited backups
   max_size: 10                              # in mb
   max_age: 90                               # in days, set 0 for unlimited days

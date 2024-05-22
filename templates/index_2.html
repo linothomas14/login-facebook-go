@@ -1,0 +1,46 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Facebook Login</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+
+  <body>
+    <a
+      href="https://www.facebook.com/dialog/oauth?client_id=1121571312516703&display=page&redirect_uri=https%3A%2F%2Fecef-180-243-15-162.ngrok-free.app%2Fcallback%3Fstate%3DcobaState123&response_type=token&scope=pages_read_engagement%2Cpages_manage_metadata%2Cinstagram_basic%2Cinstagram_manage_messages%2Cpublic_profile"
+      class="login-button"
+      target="_blank"
+      >Login with Facebook</a
+    >
+    <a
+      href="https://www.google.com/search?q=google&oq=google&gs_lcrp=EgZjaHJvbWUqEAgAEAAYgwEY4wIYsQMYgAQyEAgAEAAYgwEY4wIYsQMYgAQyEwgBEC4YgwEYxwEYsQMY0QMYgAQyDQgCEAAYgwEYsQMYgAQyBggDEEUYQTIGCAQQRRhBMgYIBRBFGDwyBggGEAUYQDIGCAcQRRg80gEHOTUxajBqN6gCALACAA&sourceid=chrome&ie=UTF-8"
+      class="login-button"
+      target="_blank"
+      >Google</a
+    >
+  </body>
+</html> -->
+
+
+<!-- si iframe akan nge render ini -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Facebook Login</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <a href="{{.LoginUrl}}" class="login-button" target="_blank"
+      >Login with Facebook</a
+    >
+    <a href="/logout" class="logout-button">Logout</a>
+    <!-- <a
+      href="https://www.google.com/search?q=google"
+      class="google-button"
+      target="_blank"
+      >Google</a
+    > -->
+  </body>
+</html>

@@ -47,25 +47,41 @@ func init() {
 	AppID = util.Configuration.App.AppID
 	RedirectURL = util.Configuration.App.HostURLCallback + "/callback?"
 	Secret = util.Configuration.App.Secret
-	ConfigID = util.Configuration.App.ConfigID
+	fmt.Println(AppID)
+	fmt.Println(RedirectURL)
+	fmt.Println(Secret)
+
 }
 
 func main() {
-
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	http.HandleFunc("/", handleHome)
-	http.HandleFunc("/success-login", handleSuccessLogin)
-	http.HandleFunc("/get-access-token", handleGetToken)
+	http.HandleFunc("/", corsMiddleware(handleHome))
+	http.HandleFunc("/success-login", corsMiddleware(handleSuccessLogin))
+	http.HandleFunc("/get-access-token", corsMiddleware(handleGetToken))
 
-	http.HandleFunc("/login-bento", handleLoginBento)
-	http.HandleFunc("/callback", handleCallbackBento)
+	http.HandleFunc("/login-bento", corsMiddleware(handleLoginBento))
+	http.HandleFunc("/callback", corsMiddleware(handleCallbackBento))
 
-	http.HandleFunc("/callback/core", handleCallbackBentoCore)
+	http.HandleFunc("/callback/core", corsMiddleware(handleCallbackBentoCore))
 
-	http.HandleFunc("/logout", handleLogout)
+	http.HandleFunc("/logout", corsMiddleware(handleLogout))
 	log.Println("Server starting on http://localhost:8080...")
 	http.ListenAndServe(":8080", nil)
+}
+
+// corsMiddleware adds CORS headers to the response
+func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*") // Allow any domain
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next(w, r)
+	}
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
@@ -84,15 +100,24 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSuccessLogin(w http.ResponseWriter, r *http.Request) {
-	// Baca isi file index.html
+	tokenJatis := r.URL.Query().Get("tokenJatis")
+
+	// Create a data structure to pass to the template
+	data := struct {
+		TokenJatis string
+	}{
+		TokenJatis: tokenJatis,
+	}
+
+	// Parse the HTML template file
 	tmpl, err := template.ParseFiles("templates/success_login.html")
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// Execute template with no data (since this is a simple example)
-	err = tmpl.Execute(w, nil)
+	// Execute the template with the token data
+	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
@@ -102,12 +127,10 @@ func handleSuccessLogin(w http.ResponseWriter, r *http.Request) {
 func handleLoginBento(w http.ResponseWriter, r *http.Request) {
 
 	session := r.URL.Query().Get("session")
-	// fmt.Println(session)
-	clientID := r.URL.Query().Get("client_id")
-	// fmt.Println(clientID)
-	finalRedirectURL := fmt.Sprintf("%sstate=%s__%s", RedirectURL, clientID, session)
 
-	// fmt.Println("URL = ", finalRedirectURL)
+	clientID := r.URL.Query().Get("client_id")
+
+	finalRedirectURL := fmt.Sprintf("%sstate=%s__%s", RedirectURL, clientID, session)
 
 	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=email,read_insights,pages_manage_cta,pages_manage_instant_articles,pages_show_list,read_page_mailboxes,ads_management,ads_read,business_management,page_events,pages_read_engagement,pages_manage_metadata,pages_read_user_content,pages_manage_ads,pages_manage_posts,pages_manage_engagement,whatsapp_business_messaging,public_profile", AppID, finalRedirectURL)
 
@@ -223,25 +246,24 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loginURL := fmt.Sprintf("%s/success-login", util.Configuration.App.HostURLCallback)
+	loginURL := fmt.Sprintf("%s/success-login?tokenJatis=%s", util.Configuration.App.HostURLCallback, token.TokenJatis)
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
-	fmt.Println("done")
+	fmt.Println("\ndone")
 	fmt.Println("Long Lived Token:", longLivedToken)
 }
 
 func handleGetToken(w http.ResponseWriter, r *http.Request) {
 
 	session := r.URL.Query().Get("session")
-	// fmt.Println(session)
+
 	clientID := r.URL.Query().Get("client_id")
-	// fmt.Println(clientID)
 
 	token, err := getTokenByClientIDAndSession(clientID, session)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			w.WriteHeader(http.StatusNotFound)
-			response := map[string]interface{}{"error": "Token not found"}
+			w.WriteHeader(http.StatusOK)
+			response := map[string]interface{}{"token": nil, "expired_at": nil}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(response)
 			return
@@ -254,6 +276,9 @@ func handleGetToken(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+
+	// loginURL := fmt.Sprintf("%s/success-login?tokenJatis=%s", util.Configuration.App.HostURLCallback, token.TokenJatis)
+	// http.Redirect(w, r, loginURL, http.StatusSeeOther)
 
 }
 
@@ -346,7 +371,6 @@ func insertToken(token Token) error {
 }
 
 func generateToken() (string, error) {
-	// Menghitung jumlah byte yang diperlukan untuk panjang token yang diinginkan
 	length := 35
 
 	byteLength := length / 4 * 3

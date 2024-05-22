@@ -4,16 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"login-meta-jatis/entity"
+	"login-meta-jatis/model/response"
 	"login-meta-jatis/provider"
 	"login-meta-jatis/repository"
 	"login-meta-jatis/util"
 	"net/http"
+	"time"
 )
 
 type LoginService interface {
-	LoginCore(ctx context.Context, token string, state string) (err error)
+	LoginCore(ctx context.Context, token string, clientID string, session string) (err error)
+	FindClientByClientID(ctx context.Context, clientID string) (err error)
 }
 
 type LoginImpl struct {
@@ -34,38 +37,41 @@ func NewLoginImpl(
 	}
 }
 
-func (l *LoginImpl) LoginCore(ctx context.Context, token string, state string) (err error) {
+func (l *LoginImpl) LoginCore(ctx context.Context, token string, clientID string, session string) (err error) {
 
-	var newToken entity.Token
-
-	// TODO : EXTEND SHORT LIVE TOKEN -> LONG LIVE TOKEN
-	longLivedToken, err := extendToken(token)
+	tokenMeta, err := extendToken(token)
 
 	if err != nil {
 		return
 	}
 
-	newToken.TokenMeta = longLivedToken
+	jatisToken := util.GenerateHexUUID()
 
-	// TODO : GENERATE TOKEN JATIS,
+	newToken := entity.Token{
+		ClientID:  clientID,
+		Session:   session,
+		TokenMeta: tokenMeta.AccessToken,
+		Token:     jatisToken,
+		IsActive:  true,
+		ExpiredAt: expiresInToDate(tokenMeta.ExpiresIn),
+		CreatedAt: time.Now().Add(7 * time.Hour),
+	}
 
-	// TODO : STORE TOKEN_JATIS, STATE(CLIENT_ID) DAN ACCESS_TOKEN
-	err = l.tokenRepo.Create(ctx, newToken)
+	err = l.tokenRepo.Save(ctx, newToken)
 
 	if err != nil {
 		return fmt.Errorf("%v: %v", ErrRepository, err)
 	}
 
-	// TODO : TAMPILKAN HALAMAN success_login.html
-
 	return
+
 }
 
-func extendToken(shortLivedToken string) (string, error) {
+func (l *LoginImpl) FindClientByClientID(ctx context.Context, clientID string) (err error) {
+	return l.credRepo.FindClientByClientID(ctx, clientID)
+}
 
-	type AuthToken struct {
-		AccessToken string `json:"access_token,omitempty"`
-	}
+func extendToken(shortLivedToken string) (longLivedToken response.TokenMeta, err error) {
 
 	ctx := context.Background()
 
@@ -73,27 +79,37 @@ func extendToken(shortLivedToken string) (string, error) {
 
 	if err != nil {
 		// Handle error
-		return "", err
+		return
 	}
 	httpClient := &http.Client{}
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
 		// Handle error
-		return "", err
+		return
 	}
 	defer httpResp.Body.Close()
 
-	body, err := ioutil.ReadAll(httpResp.Body)
+	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		// Handle error
-		return "", err
+		return
 	}
 
-	var longLivedToken AuthToken
 	err = json.Unmarshal(body, &longLivedToken)
 	if err != nil {
 
-		return "", err
+		return
 	}
-	return longLivedToken.AccessToken, err
+	return longLivedToken, err
+}
+
+func expiresInToDate(expiresIn int64) time.Time {
+
+	expiresInDuration := time.Second * time.Duration(expiresIn)
+
+	currentTime := time.Now()
+
+	expirationTime := currentTime.Add(expiresInDuration)
+
+	return expirationTime
 }

@@ -56,6 +56,15 @@ func authorization(logger provider.ILogger) gin.HandlerFunc {
 	}
 }
 
+func setReqID() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		reqID := util.GenerateReqID()
+		ctx.Set("req-id", reqID)
+		ctx.Header("X-REQUEST-ID", reqID)
+		ctx.Next()
+	}
+}
+
 func loggingMiddleware(logger provider.ILogger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Starting time

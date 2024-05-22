@@ -12,7 +12,7 @@ import (
 )
 
 type TokenRepository interface {
-	Create(ctx context.Context, token entity.Token) (err error)
+	Save(ctx context.Context, token entity.Token) (err error)
 }
 
 type TokenRepositoryImpl struct {
@@ -26,7 +26,7 @@ func NewTokenRepositoryImpl(client *mongo.Client, log provider.ILogger) *TokenRe
 	return &TokenRepositoryImpl{coll: coll, log: log}
 }
 
-func (t *TokenRepositoryImpl) Create(ctx context.Context, token entity.Token) (err error) {
+func (t *TokenRepositoryImpl) Save(ctx context.Context, token entity.Token) (err error) {
 	logger := t.log.WithFields(provider.MongoLog, logrus.Fields{"DATABASE_NAME": util.Configuration.MongoDB.Database, "COLLECTION_NAME": util.Configuration.MongoDB.Collection.Token})
 	logger.Infof("inserting into MongoDB database")
 
