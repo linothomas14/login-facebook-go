@@ -47,12 +47,10 @@ func init() {
 	AppID = util.Configuration.App.AppID
 	RedirectURL = util.Configuration.App.HostURLCallback + "/callback?"
 	Secret = util.Configuration.App.Secret
-	ConfigID = util.Configuration.App.ConfigID
 	fmt.Println(AppID)
 	fmt.Println(RedirectURL)
 	fmt.Println(Secret)
-	fmt.Println(ConfigID)
-	fmt.Println(" ")
+
 }
 
 func main() {
@@ -129,14 +127,12 @@ func handleSuccessLogin(w http.ResponseWriter, r *http.Request) {
 func handleLoginBento(w http.ResponseWriter, r *http.Request) {
 
 	session := r.URL.Query().Get("session")
-	// fmt.Println(session)
+
 	clientID := r.URL.Query().Get("client_id")
-	// fmt.Println(clientID)
+
 	finalRedirectURL := fmt.Sprintf("%sstate=%s__%s", RedirectURL, clientID, session)
 
-	// fmt.Println("URL = ", finalRedirectURL)
-
-	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=email,manage_fundraisers,read_insights,publish_video,catalog_management,pages_manage_cta,pages_manage_instant_articles,pages_show_list,read_page_mailboxes,ads_management,ads_read,business_management,pages_messaging,pages_messaging_subscriptions,instagram_basic,instagram_manage_comments,instagram_manage_insights,instagram_content_publish,leads_retrieval,whatsapp_business_management,instagram_manage_messages,page_events,commerce_account_read_settings,commerce_account_manage_orders,commerce_account_read_orders,pages_read_engagement,pages_manage_metadata,pages_read_user_content,pages_manage_ads,pages_manage_posts,pages_manage_engagement,whatsapp_business_messaging,instagram_shopping_tag_products,instagram_branded_content_brand,instagram_branded_content_creator,instagram_branded_content_ads_brand,instagram_manage_events,public_profile", AppID, finalRedirectURL)
+	loginURL := fmt.Sprintf("https://www.facebook.com/dialog/oauth?client_id=%s&display=page&redirect_uri=%s&response_type=token&scope=email,read_insights,pages_manage_cta,pages_manage_instant_articles,pages_show_list,read_page_mailboxes,ads_management,ads_read,business_management,page_events,pages_read_engagement,pages_manage_metadata,pages_read_user_content,pages_manage_ads,pages_manage_posts,pages_manage_engagement,whatsapp_business_messaging,public_profile", AppID, finalRedirectURL)
 
 	http.Redirect(w, r, loginURL, http.StatusSeeOther)
 }
@@ -216,7 +212,7 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// fmt.Println("Response Body:", string(body))
+	fmt.Println("Response Body:", string(body))
 
 	// Decode JSON jika perlu
 	var longLivedToken AuthToken
@@ -259,12 +255,10 @@ func handleCallbackBentoCore(w http.ResponseWriter, r *http.Request) {
 func handleGetToken(w http.ResponseWriter, r *http.Request) {
 
 	session := r.URL.Query().Get("session")
-	// fmt.Println(session)
+
 	clientID := r.URL.Query().Get("client_id")
-	// fmt.Println(clientID)
 
 	token, err := getTokenByClientIDAndSession(clientID, session)
-
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -377,7 +371,6 @@ func insertToken(token Token) error {
 }
 
 func generateToken() (string, error) {
-	// Menghitung jumlah byte yang diperlukan untuk panjang token yang diinginkan
 	length := 35
 
 	byteLength := length / 4 * 3

@@ -14,7 +14,7 @@ import (
 )
 
 type CredentialRepository interface {
-	FindCredentialByUserID(ctx context.Context, userID string) (err error)
+	FindClientByClientID(ctx context.Context, userID string) (err error)
 }
 
 type CredRepositoryImpl struct {
@@ -23,15 +23,19 @@ type CredRepositoryImpl struct {
 }
 
 func NewCredRepositoryImpl(client *mongo.Client, log provider.ILogger) *CredRepositoryImpl {
-	db := client.Database(util.Configuration.MongoDB.CredentialDatabase)
+	// fmt.Println("db=>>>>", util.Configuration.MongoDB.Database, "coll ->>>>", util.Configuration.MongoDB.Collection.ClientCredential)
+	db := client.Database(util.Configuration.MongoDB.Database)
 	coll := db.Collection(util.Configuration.MongoDB.Collection.ClientCredential)
+	// fmt.Println("db=>>>>", db, "coll ->>>>", coll)
 	return &CredRepositoryImpl{coll: coll, log: log}
 }
 
-func (c *CredRepositoryImpl) FindCredentialByUserID(
+func (c *CredRepositoryImpl) FindClientByClientID(
 	ctx context.Context,
-	userID string,
+	clientID string,
 ) (err error) {
+
+	// fmt.Println(c.coll)
 
 	var cred entity.Cred
 	var reqID string
@@ -44,7 +48,7 @@ func (c *CredRepositoryImpl) FindCredentialByUserID(
 		provider.MongoLog,
 		logrus.Fields{
 			"REQUEST_ID":      reqID,
-			"DATABASE_NAME":   util.Configuration.MongoDB.CredentialDatabase,
+			"DATABASE_NAME":   util.Configuration.MongoDB.Database,
 			"COLLECTION_NAME": util.Configuration.MongoDB.Collection.Token,
 		},
 	)
@@ -53,14 +57,14 @@ func (c *CredRepositoryImpl) FindCredentialByUserID(
 
 	filter := bson.D{
 		{
-			Key:   "user_id",
-			Value: userID,
+			Key:   "client_id",
+			Value: clientID,
 		},
 	}
 
 	if mongoErr := c.coll.FindOne(ctx, filter).Decode(&cred); mongoErr != nil {
 		if mongoErr == mongo.ErrNoDocuments {
-			err = ErrNotFound
+			err = fmt.Errorf("client not found")
 			logger.Errorf("Checking credential from mongo db failed %s", err)
 			return
 		}

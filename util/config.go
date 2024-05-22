@@ -27,23 +27,21 @@ type Config struct {
 		LocalTime  bool   `mapstructure:"local_time"`
 	} `mapstructure:"logger"`
 	App struct {
-		AppID              string `mapstructure:"app_id"`
-		ConfigID           string `mapstructure:"config_id"`
-		Secret             string `mapstructure:"secret"`
-		HostURLCallback    string `mapstructure:"host_url_callback"`
-		HostClientCallback string `mapstructure:"host_client_callback"`
+		AppID           string `mapstructure:"app_id"`
+		Secret          string `mapstructure:"secret"`
+		HostURLCallback string `mapstructure:"host_url_callback"`
 	} `mapstructure:"app"`
 	MongoDB struct {
-		Host               string `mapstructure:"host"`
-		Port               int    `mapstructure:"port"`
-		Username           string `mapstructure:"username"`
-		Password           string `mapstructure:"password"`
-		Database           string `mapstructure:"database"`
-		CredentialDatabase string `mapstructure:"credential_database"`
-		MaxPoolSize        uint64 `mapstructure:"max_pool_size"`
-		ConnectTimeout     int    `mapstructure:"connect_timeout"`
-		AuthSource         string `mapstructure:"auth_source"`
-		Collection         struct {
+		Host     string `mapstructure:"host"`
+		Port     int    `mapstructure:"port"`
+		Username string `mapstructure:"username"`
+		Password string `mapstructure:"password"`
+		Database string `mapstructure:"database"`
+		// CredentialDatabase string `mapstructure:"credential_database"`
+		MaxPoolSize    uint64 `mapstructure:"max_pool_size"`
+		ConnectTimeout int    `mapstructure:"connect_timeout"`
+		AuthSource     string `mapstructure:"auth_source"`
+		Collection     struct {
 			Token            string `mapstructure:"token"`
 			ClientCredential string `mapstructure:"client_credential"`
 		} `mapstructure:"collection"`
